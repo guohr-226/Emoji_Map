@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>打开文件夹加载表情图库</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        header {
+            width: 100%;
+            background-color: #f8f9fa;
+            padding: 1rem;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        main {
+            width: 100%;
+            max-width: 800px;
+            padding: 1rem;
+        }
+
+        #fileInput {
+            display: block;
+            margin: 1rem auto;
+            padding: 0.5rem;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+            justify-items: center;
+            align-items: center;
+        }
+
+        .grid-item {
+            width: 100px;
+            height: 100px;
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .grid-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s;
+        }
+
+        .grid-item img:hover {
+            transform: scale(1.1);
+        }
+
+        /* 删除按钮样式 */
+        .delete-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white;
+            border: none;
+            padding: 5px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .delete-btn:hover {
+            background-color: rgba(255, 0, 0, 0.6);
+        }
+
+        /* 模态窗口样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.7);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            margin: 5% auto;
+            max-width: 90%;
+            max-height: 80%;
+            position: relative;
+        }
+
+        .modal-content img {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+        }
+
+        .close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: #fff;
+            font-size: 30px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: #bbb;
+            text-decoration: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>打开文件夹加载表情图库</h1>
+    </header>
+    <main>
+        <!-- 文件选择器 -->
+        <input type="file" id="fileInput" webkitdirectory directory multiple accept="image/*">
+        <!-- 图库展示区域 -->
+        <div id="gallery" class="grid-container"></div>
+    </main>
+
+    <!-- 模态窗口 -->
+    <div id="myModal" class="modal">
+        <span class="close">&times;</span>
+        <div class="modal-content">
+            <img id="modalImage" src="" alt="大图">
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const fileInput = document.getElementById("fileInput");
+            const gallery = document.getElementById("gallery");
+            const modal = document.getElementById("myModal");
+            const modalImage = document.getElementById("modalImage");
+            const closeBtn = document.querySelector(".close");
+
+            // 打开图片时展示大图
+            closeBtn.addEventListener("click", () => {
+                modal.style.display = "none";
+            });
+
+            // 点击窗口外部时关闭模态窗口
+            window.addEventListener("click", (event) => {
+                if (event.target === modal) {
+                    modal.style.display = "none";
+                }
+            });
+
+            // 初始化一个文件数组，用于存储加载的文件
+            let loadedFiles = [];
+
+            fileInput.addEventListener("change", (event) => {
+                const files = Array.from(event.target.files); // 获取用户选择的文件
+
+                files.forEach((file) => {
+                    if (!file.type.startsWith("image/")) return; // 仅处理图片文件
+
+                    // 保证不重复加载相同的文件
+                    if (loadedFiles.some(f => f.name === file.name)) return;
+
+                    const reader = new FileReader(); // 用于读取本地文件
+
+                    reader.onload = (e) => {
+                        const gridItem = document.createElement("div");
+                        gridItem.classList.add("grid-item");
+
+                        const img = document.createElement("img");
+                        img.src = e.target.result; // 显示文件内容
+                        img.alt = file.name;
+                        
+                        // 点击图片查看大图
+                        img.addEventListener("click", () => {
+                            modal.style.display = "flex"; // 显示模态窗口
+                            modalImage.src = e.target.result; // 更新大图
+                        });
+                        
+                        // 创建删除按钮
+                        const deleteBtn = document.createElement("button");
+                        deleteBtn.classList.add("delete-btn");
+                        deleteBtn.textContent = "X";
+                        deleteBtn.addEventListener("click", (e) => {
+                            e.stopPropagation(); // 防止触发图片点击事件
+                            gridItem.remove(); // 从页面上移除图片
+                            // 从加载文件数组中删除该文件
+                            loadedFiles = loadedFiles.filter(f => f.name !== file.name);
+                        });
+
+                        gridItem.appendChild(img);
+                        gridItem.appendChild(deleteBtn);
+                        gallery.appendChild(gridItem);
+
+                        // 添加到文件数组，避免重复加载
+                        loadedFiles.push(file);
+                    };
+
+                    reader.readAsDataURL(file); // 将文件读取为 Data URL
+                });
+            });
+        });
+    </script>
+</body>
+</html>
